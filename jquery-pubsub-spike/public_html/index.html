@@ -1,0 +1,146 @@
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>jQuery Pub Sub Spike</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <style>
+            form { background: #eee; border: solid 4px #ddd; border-radius: 14px; color: #555; font: 14px/18px arial, sans-serif; margin: 20px; padding-bottom: 10px; }
+            form h1 { font-size: 130%; margin: 10px; }
+            form h2 { font-weight: bold; margin: 10px; }
+            form p { color: #777; font-size: 90%; padding: 10px; }
+            form div { margin: 10px; overflow: auto; }
+            form button { margin: 0 10px 0 0; }
+        </style>
+        <script src="lib/jquery-1.6.2.js"></script>
+    </head>
+    <body>
+        <form name="checkbox-test" action="/echo/html/" method="post">
+            <h1>Add Some Data</h1>
+
+            <p>
+                <input type="text" id="first" />
+                <label for="first">First Name</label>
+
+            </p>
+            <p>
+                <input type="text" id="last" />
+                <label for="last">Last Name</label>
+
+            </p>
+            <p>
+                <input type="text" id="team" />
+                <label for="team">Favorite Team</label>
+
+            </p>
+            <p>
+                <button id="add">Add</button>
+            </p>
+
+            <h1>Added Results</h1>
+
+            <div class="results-panel">
+                <h2>Usernames</h2>
+                <div class="names"></div>
+                <h2>Team Names</h2>
+                <div class="teams"></div>
+                <h2>All Data</h2>
+                <div class="all"></div>
+            </div>
+
+        </form>
+        <script>
+            window.onload = function() {
+                //------------------------------
+                // pub sub plugin
+                //------------------------------
+                ;
+                (function(d) {
+                    var cache = {};
+
+                    d.publish = function(/* String */topic, /* Array? */args) {
+                        try {
+                            d.each(cache[topic], function() {
+                                this.apply(d, args || []);
+                            });
+                        } catch (err) {
+                            // handle this error
+                            console.log(err);
+                        }
+                    };
+
+                    d.subscribe = function(/* String */topic, /* Function */callback) {
+                        if (!cache[topic]) {
+                            cache[topic] = [];
+                        }
+                        cache[topic].push(callback);
+                        return [topic, callback]; // Array
+                    };
+
+                    d.unsubscribe = function(/* Array */handle) {
+                        var t = handle[0];
+                        cache[t] && d.each(cache[t], function(idx) {
+                            if (this == handle[1]) {
+                                cache[t].splice(idx, 1);
+                            }
+                        });
+                    };
+
+                })(jQuery);
+
+
+
+                //------------------------------
+                // page controller
+                //------------------------------
+
+                // Initialize the panels
+                var userPanel = new UpdatePanel('update.user', function(first, last) {
+                    $('.results-panel .names').append(first + ' ' + last + '<br />');
+                }),
+                        teamPanel = new UpdatePanel('update.team', function(team) {
+                    $('.results-panel .teams').append(team + '<br />');
+                });
+                allPanel = new UpdatePanel('update.all', function(first, last, team) {
+                    $('.results-panel .all').append(first + ' ' + last + ', ' + team + '<br />');
+                });
+
+
+                // Bind to the click event
+                $('#add').click(function() {
+
+                    // Get the values from the form
+                    var first = $('#first').val(),
+                            last = $('#last').val(),
+                            team = $('#team').val();
+
+                    // Publish the new data
+                    $.publish('update.user', [first, last]);
+                    $.publish('update.team', [team]);
+                    $.publish('update.all', [first, last, team]);
+
+                    return false;
+                });
+
+
+                // subscription method
+                function UpdatePanel(event, htmlAction) {
+
+                    var _subscribe = function(event) {
+                        $.subscribe(event, htmlAction);
+                    }
+
+                    if (event !== undefined) {
+                        _subscribe(event);
+                    }
+
+                }
+
+            };
+
+        </script>
+    </body>
+</html>
